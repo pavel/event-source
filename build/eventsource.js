@@ -86,7 +86,6 @@ var EventSource = (function (_super) {
     EventSource.prototype._connect = function () {
         var _this = this;
         if (this._readyState === ReadyState.CONNECTING || this._readyState === ReadyState.OPEN) {
-            console.log("Already connected, bye");
             return;
         }
         if (this._lastEventId != null) {
@@ -109,10 +108,9 @@ var EventSource = (function (_super) {
     };
     EventSource.prototype._reconnect = function () {
         var _this = this;
-        var to = setTimeout(this._connect.bind(this), this._reconnectTimeout);
-        var ind = this._timeouts.push(to);
+        var timeout = setTimeout(this._connect.bind(this), this._reconnectTimeout);
+        var ind = this._timeouts.push(timeout);
         setTimeout(function () {
-            clearTimeout(to);
             _this._timeouts.splice(ind, 1);
         }, this._reconnectTimeout + 100);
         return;
@@ -123,7 +121,6 @@ var EventSource = (function (_super) {
             this.emit("error", { status: res.statusCode, reason: res.statusMessage });
             return;
         }
-        console.log("Connected");
         this._readyState = ReadyState.OPEN;
         var parser = new event_stream_1.default();
         res.pipe(parser);
@@ -138,6 +135,10 @@ var EventSource = (function (_super) {
         });
     };
     EventSource.prototype.close = function () {
+        this._timeouts.forEach(function (timeout) {
+            clearTimeout(timeout);
+        });
+        this._timeouts = [];
         this._req.abort();
         this._req.removeAllListeners();
         this.removeAllListeners();
