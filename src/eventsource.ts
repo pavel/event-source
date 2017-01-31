@@ -5,10 +5,11 @@ import { parse as parseURL } from "url"
 import EventStreamParser from "event-stream"
 
 type HTTPHeaders = { [index: string]: string }
+type milliseconds = number
 
 interface EventSourceOptions {
 	headers?: HTTPHeaders
-	reconnectTimeout?: number
+	reconnectTimeout?: milliseconds
 }
 
 enum ReadyState {
@@ -17,7 +18,7 @@ enum ReadyState {
 	CLOSED = 2
 }
 
-function getTransport(protocol): Function {
+function getTransport(protocol: string): Function {
 	switch (protocol) {
 		case "http:":
 			return httpRequest
@@ -46,7 +47,7 @@ class EventSource extends EventEmitter {
 		return this._readyState
 	}
 
-	private _reconnectTimeout: number = 500
+	private _reconnectTimeout: milliseconds = 500
 	private _readyState: ReadyState = ReadyState.CLOSED
 	private _url: string
 	private _connectionOptions: any
@@ -77,7 +78,6 @@ class EventSource extends EventEmitter {
 
 	private _connect() {
 		if (this._readyState === ReadyState.CONNECTING || this._readyState === ReadyState.OPEN) {
-			console.log("Already connected, bye")
 			return
 		}
 		if (this._lastEventId != null) {
@@ -100,10 +100,9 @@ class EventSource extends EventEmitter {
 	}
 
 	private _reconnect() {
-		const to = setTimeout(this._connect.bind(this), this._reconnectTimeout)
-		const ind = this._timeouts.push(to)
+		const timeout = setTimeout(this._connect.bind(this), this._reconnectTimeout)
+		const ind = this._timeouts.push(timeout)
 		setTimeout(() => {
-			clearTimeout(to)
 			this._timeouts.splice(ind, 1)
 		}, this._reconnectTimeout + 100)
 		return
@@ -114,7 +113,6 @@ class EventSource extends EventEmitter {
 			this.emit("error", { status: res.statusCode, reason: res.statusMessage })
 			return
 		}
-		console.log("Connected")
 		this._readyState = ReadyState.OPEN
 		const parser = new EventStreamParser()
 		res.pipe(parser)
@@ -130,6 +128,10 @@ class EventSource extends EventEmitter {
 	}
 
 	close() {
+		this._timeouts.forEach((timeout) => {
+			clearTimeout(timeout)
+		})
+		this._timeouts = []
 		this._req.abort()
 		this._req.removeAllListeners()
 		this.removeAllListeners()
