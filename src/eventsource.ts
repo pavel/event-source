@@ -91,7 +91,7 @@ class EventSource extends EventEmitter {
 			this.emit("error", err)
 		})
 		this._req.on("close", () => {
-			this.emit("error", { msg: "connection lost" })
+			this.emit("error", { reason: "connection lost" })
 			this._req.removeAllListeners()
 			this._readyState = ReadyState.CLOSED
 			this._reconnect()
@@ -111,19 +111,11 @@ class EventSource extends EventEmitter {
 
 	private _handleResponse(res: ClientResponse) {
 		if (res.statusCode > 399) {
-			this.emit("error", { status: res.statusCode })
-			this._reconnect()
+			this.emit("error", { status: res.statusCode, reason: res.statusMessage })
 			return
 		}
 		console.log("Connected")
 		this._readyState = ReadyState.OPEN
-		/*
-		res.on("close", () => {
-			this.emit("error", { msg: "connection lost" })
-			this._readyState = ReadyState.CLOSED
-			this._reconnect()
-		})
-		*/
 		const parser = new EventStreamParser()
 		res.pipe(parser)
 		parser.on("data", (event) => {
