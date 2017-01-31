@@ -100,7 +100,7 @@ var EventSource = (function (_super) {
             _this.emit("error", err);
         });
         this._req.on("close", function () {
-            _this.emit("error", { msg: "connection lost" });
+            _this.emit("error", { reason: "connection lost" });
             _this._req.removeAllListeners();
             _this._readyState = ReadyState.CLOSED;
             _this._reconnect();
@@ -120,19 +120,11 @@ var EventSource = (function (_super) {
     EventSource.prototype._handleResponse = function (res) {
         var _this = this;
         if (res.statusCode > 399) {
-            this.emit("error", { status: res.statusCode });
-            this._reconnect();
+            this.emit("error", { status: res.statusCode, reason: res.statusMessage });
             return;
         }
         console.log("Connected");
         this._readyState = ReadyState.OPEN;
-        /*
-        res.on("close", () => {
-            this.emit("error", { msg: "connection lost" })
-            this._readyState = ReadyState.CLOSED
-            this._reconnect()
-        })
-        */
         var parser = new event_stream_1.default();
         res.pipe(parser);
         parser.on("data", function (event) {
